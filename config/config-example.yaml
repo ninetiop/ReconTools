@@ -1,0 +1,10 @@
+RECON:
+  THIRD_PARTY:
+    CRTSH:
+      URL: https://crt.sh
+    CERTSPOTTER:
+      URL: https://api.certspotter.com/v1/issuances
+      API_KEY: <YOUR_API_KEY_HERE>
+    VT:
+      URL: https://www.virustotal.com/api/v3/domains
+      API_KEY: <YOUR_API_KEY_HERE>

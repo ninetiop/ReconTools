@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+
+# Dossier du script (recon_services)
+SCRIPT_DIR="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+
+# Racine src pour Python imports
+SRC_DIR="$(realpath "$SCRIPT_DIR")/src"
+
+# Ajouter src au PYTHONPATH
+export PYTHONPATH="$SRC_DIR:$PYTHONPATH"
+
+# Appel du CLI Python avec tous les arguments
+python3 "$SRC_DIR/recon.py" "$@"
