@@ -1,0 +1,20 @@
+# Byte-compiled / cache
+__pycache__/
+
+# Virtual environments
+venv/
+.venv/
+
+# UV (Astral)
+.uv/
+uv.lock
+
+# pip / poetry / tooling caches
+pip-log.txt
+pip-delete-this-directory.txt
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+
+# Vscode
+.vscode/
