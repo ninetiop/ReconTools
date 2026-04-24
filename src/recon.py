@@ -35,6 +35,7 @@ import logging
 
 import click
 from core.recon.dns.dns_toolkit import DNSToolkit
+from core.recon.http.crawler import Crawler
 from core.recon.http.http_toolkit import HTTPToolkit
 from tabulate import tabulate
 from utils.banner import print_banner
@@ -129,13 +130,6 @@ def cli(doc):
 
 @cli.command("enum_records")
 @click.argument("domain")
-@click.option(
-    "--type-records",
-    "-t",
-    multiple=True,
-    default=["A", "MX", "TXT", "CNAME", "NS", "AAAA", "SOA", "SRV", "PTR"],
-    help="List of DNS record types to query",
-)
 @click.option("--resolvers", "-r", multiple=True, help="Resolver's IP DNS")
 @click.option(
     "--json",
@@ -156,19 +150,19 @@ def cli(doc):
 def enum_records(
     domain: str,
     as_json: bool,
-    type_records: list[str],
     resolvers: list[str],
     output: str | None,
     pretty: bool,
 ):
-    """Enumerate DNS records"""
+    """Enumerate DNS records for a given domain"""
     if as_json and pretty:
         raise click.UsageError("--pretty and --json cannot be used together")
 
     toolkit = DNSToolkit(resolvers=resolvers)
-    records = toolkit.enum_dns_records(domain, type_records)
+    records = toolkit.enum_dns_records(domain)
 
     content = format_records(records, as_json, pretty)
+    print("\r\n")
     output_result(content, output)
 
 
@@ -201,7 +195,7 @@ def enum_subdomains(
     output: str | None,
     pretty: bool,
 ):
-    """Enumerate DNS subdomains"""
+    """Enumerate DNS subdomains given a domain"""
     asyncio.run(_enum_subdomains(domain, resolvers, wordlist, as_json, output, pretty))
 
 
@@ -213,7 +207,7 @@ async def _enum_subdomains(
     output: str | None,
     pretty: bool,
 ):
-    """Enumerate DNS subdomains"""
+    """Enumerate DNS subdomains given a domain"""
     if as_json and pretty:
         raise click.UsageError("--pretty and --json cannot be used together")
 
@@ -227,7 +221,36 @@ async def _enum_subdomains(
             subdomains_status[status_probe["fqdn"]] = status_probe
     if subdomains_status:
         content = format_subdomains_register(subdomains_status, as_json, pretty)
+        print("\r\n")
         output_result(content, output)
+
+
+@cli.command("crawl")
+@click.argument("urls", nargs=-1)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Output results as JSON"
+)
+@click.option("--output", "-o", type=str, help="Save result in file")
+@click.option(
+    "--pretty",
+    "-p",
+    is_flag=True,
+    default=False,
+    help="Display result as human-readable",
+)
+def crawl(urls: list[str], as_json: bool, output: str | None, pretty: bool):
+    """Crawl given URLs to extract links and technologies"""
+    asyncio.run(_crawl_subdomains(set(urls)))
+
+
+async def _crawl_subdomains(subdomains: set[str]):
+    """Crawl subdomains to extract links and technologies"""
+    crawler = Crawler()
+    async for crawl_result in crawler.crawl(list(subdomains)):
+        if crawl_result:
+            for url, links in crawl_result["links"]:
+                for link in links:
+                    logger.info(f"[+] {url} → {link}")
 
 
 if __name__ == "__main__":

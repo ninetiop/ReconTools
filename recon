@@ -11,4 +11,4 @@ SRC_DIR="$(realpath "$SCRIPT_DIR")/src"
 export PYTHONPATH="$SRC_DIR:$PYTHONPATH"
 
 # Appel du CLI Python avec tous les arguments
-python3 "$SRC_DIR/recon.py" "$@"
+$SCRIPT_DIR/.venv/bin/python "$SRC_DIR/recon.py" "$@"

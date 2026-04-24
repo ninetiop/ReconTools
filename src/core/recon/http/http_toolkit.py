@@ -22,38 +22,33 @@ HTTP_STATUS_CODES = {
 
 
 class HTTPToolkit:
-    async def _fetch(self, session, fqdn: str) -> tuple[str, dict]:
-        results = {}
+    async def _fetch(self, session, fqdn: str):
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) "
-            "Chrome/116.0.0.0 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.5",
+            "User-Agent": "Mozilla/5.0",
+            "Accept": "text/html,*/*",
         }
 
-        for scheme in ("http://", "https://"):
-            full_url = f"{scheme}{fqdn}"
+        for scheme in ("https://", "http://"):
+            url = f"{scheme}{fqdn}"
 
             try:
                 async with session.get(
-                    full_url, timeout=5, ssl=False, headers=headers
+                    url, timeout=5, ssl=False, headers=headers
                 ) as response:
-                    headers = response.headers
                     return {
                         "fqdn": fqdn,
-                        "web-server": headers.get("server"),
-                        "web-waf": "cloudflare" if headers.get("cf-ray") else None,
-                        "waf-cf-ray": headers.get("cf-ray"),
-                        "http_status": HTTP_STATUS_CODES.get(
-                            response.status, f"{response.status} Unknown"
-                        ),
-                        "https_status": HTTP_STATUS_CODES.get(
-                            response.status, f"{response.status} Unknown"
-                        ),
+                        "scheme": scheme[:-3],
+                        "status": response.status,
+                        "http_status": HTTP_STATUS_CODES.get(response.status),
+                        "server": response.headers.get("server"),
+                        "cf_ray": response.headers.get("cf-ray"),
+                        "waf": "cloudflare" if response.headers.get("cf-ray") else None,
                     }
+
             except Exception:
-                results[scheme[:-3]] = None
+                continue
+
+        return None
 
     async def probe(self, fqdns: list[str]) -> dict:
         async with aiohttp.ClientSession() as session:
@@ -61,9 +56,11 @@ class HTTPToolkit:
             for coro in asyncio.as_completed(tasks):
                 try:
                     res = await coro
-                    if res is None:
-                        continue
-                    logger.info(f"[+] Probed {res['fqdn']}")
-                    yield res
+                    if res:
+                        logger.info(
+                            f"[+] Alive: {res['fqdn']} ({res['scheme']}) → HTTP {res['status']}"
+                        )
+                        yield res
                 except Exception as e:
-                    logger.error(f"[!] Error probing URL: {e}")
+                    logger.info(f"[-] Error probing {res['fqdn']}: {e}")
+                    pass
